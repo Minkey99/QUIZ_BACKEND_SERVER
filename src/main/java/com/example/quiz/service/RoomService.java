@@ -26,8 +26,6 @@ public class RoomService {
 
     public RoomEnterResponse enterRoom(long roomId) throws IllegalAccessException {
         Room room = roomRepository.findById(roomId).orElseThrow(IllegalArgumentException::new);
-
-        // user는 jwt에서 가져올 예정
         User user = new User(5L, "user", "sample@sampe.co", Role.USER, false);
 
         if (user == null) {
@@ -43,22 +41,22 @@ public class RoomService {
         game.getGameUser().add(user);
         gameRepository.save(game);
 
-        return new RoomEnterResponse(room);
+        return new RoomEnterResponse(room.getRoomId(), room.getRoomName(), room.getTopicId(), room.getMaxPeople(), room.getQuizCount(), room.getRemoveStatus());
     }
 
     @Transactional
     public RoomModifyResponse modifyRoom(RoomModifyRequest request, long roomId) {
         Room room = roomRepository.findById(roomId).orElseThrow(IllegalArgumentException::new);
 
-        if (request.getRoomName() != null) {
-            room.changeRoomName(request.getRoomName());
+        if (request.roomName() != null) {
+            room.changeRoomName(request.roomName());
         }
 
-        if (request.getTopicId() != null) {
-            room.changeSubject(request.getTopicId());
+        if (request.topicId() != null) {
+            room.changeSubject(request.topicId());
         }
 
-        return new RoomModifyResponse(room);
+        return new RoomModifyResponse(room.getRoomName(), room.getTopicId());
     }
 
     public List<CurrentOccupancy> getCurrentOccupancy(List<Long> currentPageRooms) {
