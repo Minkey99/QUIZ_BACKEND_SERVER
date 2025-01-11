@@ -5,9 +5,13 @@ import com.example.quiz.dto.room.response.RoomEnterResponse;
 import com.example.quiz.dto.room.response.RoomListResponse;
 import com.example.quiz.dto.room.response.RoomResponse;
 import com.example.quiz.entity.Room;
+import com.example.quiz.enums.Role;
+import com.example.quiz.vo.InGameUser;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
+
+import java.util.Set;
 
 @Mapper
 public interface RoomMapper {
@@ -21,5 +25,8 @@ public interface RoomMapper {
 
     RoomListResponse RoomToRoomListResponse(Room room, Integer currentPeople);
 
-    RoomEnterResponse RoomToRoomEnterResponse(Room room);
+    @Mapping(target = "roomId", source = "room.roomId")
+    @Mapping(target = "participants", source = "participants")
+    @Mapping(source = "inGameUser", target = "inGameUser")
+    RoomEnterResponse RoomToRoomEnterResponse(Room room, InGameUser inGameUser, Set<InGameUser> participants);
 }

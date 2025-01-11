@@ -11,6 +11,7 @@ import com.example.quiz.dto.room.response.RoomResponse;
 import com.example.quiz.service.RoomProducerService;
 import com.example.quiz.service.RoomService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class RoomController {
@@ -55,6 +57,13 @@ public class RoomController {
         Map<String, Object> map = new HashMap<>();
         map.put("roomInfo", roomEnterResponse);
 
+        Set<InGameUser> set = roomEnterResponse.participants();
+        for(InGameUser participant : set) {
+            if(Objects.equals(participant.getId(), loginUserRequest.userId())) {
+                // 실시간 참가자 정보 브로드캐스트
+                simpMessagingTemplate.convertAndSend("/pub/room/" + roomId + "/participants", participant);
+            }
+        }
         return new ModelAndView("room", map);
     }
 

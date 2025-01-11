@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>room</title>
+    <title>Room</title>
+    <link rel="stylesheet" href="/static/css/game.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script src="/script/game.js"></script>
@@ -14,5 +15,57 @@
 <p><strong>Topic ID: </strong><span th:text="${roomInfo.topicId}"></span></p>
 <p><strong>Max People: </strong><span th:text="${roomInfo.maxPeople}"></span></p>
 <p><strong>Quiz Count: </strong><span th:text="${roomInfo.quizCount}"></span></p>
+
+<!-- 숨겨진 요소에 roomId 및 isAdmin 저장 -->
+<div id="roomId" th:text="${roomInfo.roomId}" style="display:none;"></div>
+<div id="isAdmin" th:text="${roomInfo.role}" style="display:none;"></div>
+
+<!-- 단일 Ready 버튼 추가: "내" Ready 상태만 토글 -->
+<button id="ready-btn"
+        th:if="${roomInfo.role() == T(com.example.quiz.enums.Role).USER}"
+        th:attr="data-user-id=${roomInfo.inGameUser().id}">
+    Ready Game
+</button>
+
+<!-- 방장(Admin)만 Start Game 버튼 등 필요시 추가 -->
+<button id="start-btn"
+        th:if="${roomInfo.role() == T(com.example.quiz.enums.Role).ADMIN}"
+        th:attr="data-user-id=${roomInfo.inGameUser().id}">
+    Start Game
+</button>
+
+<h2>Users in Room</h2>
+<table id="userTable">
+    <thead>
+    <tr>
+        <th>User ID</th>
+        <th>User Name</th>
+        <th>Ready Status</th>
+    </tr>
+    </thead>
+    <tbody id="participants">
+    <tr th:each="participant : ${roomInfo.participants}" th:attr="data-user-id=${participant.id}">
+        <td th:text="${participant.id}"></td>
+        <td th:text="${participant.username}"></td>
+        <td th:text="${participant.readyStatus ? 'Ready' : 'Not Ready'}"
+            th:classappend="${participant.readyStatus ? 'ready-true' : 'ready-false'}">
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- 디버깅을 위한 참가자 목록 출력 (옵션) -->
+<h2>Participants List (디버깅용)</h2>
+<ul>
+    <li th:each="participant : ${roomInfo.participants}"
+        th:text="'ID: ' + ${participant.id} + ', Name: ' + ${participant.username} + ', Ready: ' + (${participant.readyStatus} ? 'Yes' : 'No') + ', Role: ' + (${participant.role == T(com.example.quiz.enums.Role).ADMIN ? 'ADMIN' : 'USER'})">
+    </li>
+</ul>
+
+<script>
+    // 클라이언트 측에서 isAdmin을 읽어 변수로 설정
+    const isAdminElement = document.getElementById('isAdmin');
+</script>
+
 </body>
 </html>
