@@ -20,7 +20,7 @@ public class StompConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.setApplicationDestinationPrefixes("/room", "/room-people", "/occupancy");
+        config.setApplicationDestinationPrefixes("/room", "/room-people", "/occupancy", "/quiz");
         config.enableSimpleBroker("/pub")
                 .setHeartbeatValue(new long[]{10000, 10000})
                 .setTaskScheduler(taskScheduler());
@@ -29,7 +29,7 @@ public class StompConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/game", "/updateOccupancy")
+        registry.addEndpoint("/game", "/updateOccupancy", "quiz")
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(jwtHandshakeInterceptor)
                 .withSockJS();

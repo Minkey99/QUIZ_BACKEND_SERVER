@@ -1,6 +1,7 @@
 package com.example.quiz.service;
 
 import com.example.quiz.dto.User.LoginUserRequest;
+import com.example.quiz.dto.response.QuizRoomEnterResponse;
 import com.example.quiz.dto.response.ResponseQuiz;
 import com.example.quiz.dto.room.ChangeCurrentOccupancies;
 import com.example.quiz.dto.room.request.RoomModifyRequest;
@@ -58,11 +59,16 @@ public class RoomService {
         return RoomMapper.INSTANCE.RoomToRoomEnterResponse(room, inGameUser, game.getGameUser());
     }
 
-    public ResponseQuiz enterQuizRoom(long roomId,  LoginUserRequest loginUserRequest) throws IllegalAccessException {
+    public QuizRoomEnterResponse enterQuizRoom(long roomId, LoginUserRequest loginUserRequest) throws IllegalAccessException {
         User user = userRepository.findById(loginUserRequest.userId()).orElseThrow(IllegalAccessException::new);
         Room room = findRoomById(roomId);
 
-        return RoomMapper.INSTANCE.RoomToResponseQuiz(user, room);
+
+        InGameUser inGameUser = findUser(roomId, loginUserRequest);
+
+        log.info("user is {}", inGameUser.getId());
+        log.info("user role is {}", inGameUser.getRole());
+        return RoomMapper.INSTANCE.RoomToQuizRoomEnterResponse(inGameUser, user, room);
     }
 
     @Transactional
@@ -90,7 +96,7 @@ public class RoomService {
             if (c >= 8) {
                 throw new RuntimeException("Room capacity reached : " + roomId);
             }
-
+            log.info("room subscription count is {}", roomSubscriptionCount.get(roomId));
             alreadyInGameUser.put(userId, roomId);
 
             return c + 1;
@@ -125,7 +131,7 @@ public class RoomService {
 
     private boolean isUserAlreadyInGame(long roomId, long userId) {
         Long findRoomId = alreadyInGameUser.get(userId);
-
+        log.info("findRoomId is {}", findRoomId);
         return findRoomId != null && findRoomId == roomId;
     }
 
