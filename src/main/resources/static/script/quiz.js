@@ -3,6 +3,8 @@ let timeLeft = 30;
 let remainQuizValue = 0; // 나중에 DOM에서 초기화
 let timeIntervalId = null; // 타이머 ID
 let stompClient;
+let ans;
+let des;
 
 window.onload = function () {
     initPage();
@@ -24,6 +26,13 @@ function initPage() {
             sendCreateQuizEvent();
         });
     }
+
+    const answerBtn = document.getElementById("answerBtn");
+    if(answerBtn) {
+        answerBtn.addEventListener("click", () => {
+            checkQuizEvent()
+        })
+    }
 }
 
 // WebSocket 연결 및 구독
@@ -36,18 +45,25 @@ function connectToQuizUpdates() {
     stompClient.connect({"heart-beat": "10000,10000"}, function (frame) {
         console.log("Connected to WebSocket:", frame);
         console.log("roomId is {}", roomId);
+
         // /pub/quiz/{roomId} 경로 구독
         stompClient.subscribe(`/pub/quiz/${roomId}`, function (res) {
             const quizData = JSON.parse(res.body);
-            console.log("Received quiz data:", quizData);
-
+            ans = quizData.correctAnswer;
+            des = quizData.description;
             // 받은 데이터를 바탕으로 퀴즈 상태 업데이트
-            updateQuizStatus(quizData);
+            if(quizData.hasOwnProperty("problem")) {
+                updateQuizStatus(quizData);
+                hideAnswerAndDescription();
+            }
+            else {
+                handleWinner(quizData);
+            }
         });
     });
 }
 
-// createQuiz 이벤트 WebSocket으로 전송
+// 새 문제 출제 (Admin 전용)
 function sendCreateQuizEvent() {
     const roomId = window.location.pathname.split("/")[2];
     stompClient.send(`/room/${roomId}/send`, {}, JSON.stringify({}));
@@ -59,13 +75,72 @@ function sendCreateQuizEvent() {
     }
 }
 
+// 정답 제출 이벤트
+function checkQuizEvent() {
+    const userId = document.getElementById("userId").textContent;
+    const roomId = window.location.pathname.split("/")[2];
+    const userAnswer = document.getElementById("answerInput").value.trim();
+    stompClient.send(`/room/${roomId}/check`, {}, JSON.stringify({
+        userId : userId,
+        answer : userAnswer
+    }));
+    // 답안 제출 후 입력창 비우기
+    document.getElementById("answerInput").value = "";
+}
+
+// 정답자가 나왔을 때 처리 (winnerEmail, timeLeft=0, Toast 표시, CreateQuiz 버튼 활성화)
+function handleWinner(quizData) {
+    const winnerSpan = document.getElementById("winner");
+
+    if(!quizData.result) {
+        showToast("틀렸습니다.")
+        return;
+    }
+    winnerSpan.textContent = quizData.email;
+    // 시간을 0초로 즉시 만듬
+    if(timeIntervalId) {
+        clearInterval(timeIntervalId);
+    }
+    timeLeft = 0;
+    const timeLeftElem = document.getElementById("timeLeft");
+    if(timeLeftElem) timeLeftElem.textContent = 0;
+
+    document.getElementById("correctAnswer").style.display = "block";
+    document.getElementById("correctAnswerText").textContent = quizData.correctAnswer;
+    document.getElementById("description").style.display = "block";
+    document.getElementById("descriptionText").textContent = quizData.description;
+
+    // CreateQuiz 버튼 다시 활성화 (문제가 남아있다면)
+    if (remainQuizValue > 0) {
+        // Toast로 승리자 알림
+        showToast(`이번 문제의 승리자는 ${quizData.email} 님입니다!`, 3000);
+        const createQuizBtn = document.getElementById("createQuizBtn");
+        if (createQuizBtn) {
+            createQuizBtn.disabled = false;
+        }
+    }
+    // 마지막 문제였을때
+    else if (remainQuizValue === 0) {
+        // 최종 우승자 표시
+        const finalWinnerElem = document.getElementById("finalWinner");
+        const finalWinner = finalWinnerElem ? finalWinnerElem.textContent : "알 수 없음";
+
+        // 축하 메시지와 리다이렉트
+        showToast("모든 퀴즈가 끝났습니다! 최종 우승자는"+finalWinner+"입니다! 축하합니다! 5초뒤에 로비로 이동합니다.")
+        const roomId = window.location.pathname.split("/")[2];
+        setTimeout(() => {
+            window.location.href = `/room/${roomId}`;
+        }, 5000); // 5000ms = 5초
+    }
+}
+
 // 타이머 시작 함수
 function startTimer() {
     if (timeIntervalId) {
         clearInterval(timeIntervalId);
     }
 
-    timeLeft = 5;
+    timeLeft = 30;
     const timeLeftElem = document.getElementById("timeLeft");
 
     timeIntervalId = setInterval(() => {
@@ -74,24 +149,20 @@ function startTimer() {
 
         if (timeLeft <= 0) {
             clearInterval(timeIntervalId);
-            showToast("시간 종료");
+            if(remainQuizValue !== 0) {
+                showToast("시간 종료");
+            }
 
             // Admin에서 createQuiz 버튼 활성화
             const createQuizBtn = document.getElementById("createQuizBtn");
-            if (createQuizBtn) {
+            if (createQuizBtn && remainQuizValue !== 0) {
                 createQuizBtn.disabled = false;
             }
 
-            if (remainQuizValue === 0) {
-                // 최종 우승자 표시
-                const finalWinnerElem = document.getElementById("finalWinner");
-                const finalWinner = finalWinnerElem ? finalWinnerElem.textContent : "알 수 없음";
-
-                // 축하 메시지와 리다이렉트
-                alert(`모든 퀴즈가 끝났습니다! 최종 우승자는 ${finalWinner}입니다! 축하합니다!`);
-                const roomId = window.location.pathname.split("/")[2];
-                window.location.href = `/room/${roomId}`;
-            }
+            document.getElementById("correctAnswer").style.display = "block";
+            document.getElementById("correctAnswerText").textContent = ans;
+            document.getElementById("description").style.display = "block";
+            document.getElementById("descriptionText").textContent = des;
         }
     }, 1000);
 }
@@ -130,4 +201,18 @@ function showToast(message, duration = 3000) {
     setTimeout(() => {
         toast.remove();
     }, duration);
+}
+
+// 정답과 설명을 숨기는 함수
+function hideAnswerAndDescription() {
+    const correctAnswerElem = document.getElementById("correctAnswerText");
+    const descriptionElem = document.getElementById("descriptionText");
+
+    if (correctAnswerElem) {
+        correctAnswerElem.textContent = ""; // 내용도 초기화
+    }
+
+    if (descriptionElem) {
+        descriptionElem.textContent = ""; // 내용도 초기화
+    }
 }
