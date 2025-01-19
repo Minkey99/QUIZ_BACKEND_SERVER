@@ -1,7 +1,6 @@
 package com.example.quiz.controller;
 
 import com.example.quiz.dto.request.RequestAnswer;
-import com.example.quiz.dto.request.RequestUserInfoAnswer;
 import com.example.quiz.dto.response.ResponseCheckQuiz;
 import com.example.quiz.dto.response.ResponseQuiz;
 import com.example.quiz.service.GameService;

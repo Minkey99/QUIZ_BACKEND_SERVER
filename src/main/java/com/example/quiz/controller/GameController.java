@@ -1,10 +1,8 @@
 package com.example.quiz.controller;
 
-import com.example.quiz.dto.request.RequestAnswer;
+
 import com.example.quiz.dto.request.RequestUserId;
-import com.example.quiz.dto.request.RequestUserInfoAnswer;
 import com.example.quiz.dto.response.ResponseMessage;
-import com.example.quiz.dto.response.ResponseQuiz;
 import com.example.quiz.service.GameService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

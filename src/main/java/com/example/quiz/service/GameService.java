@@ -1,7 +1,7 @@
 package com.example.quiz.service;
 
 import com.example.quiz.dto.request.RequestAnswer;
-import com.example.quiz.dto.request.RequestUserInfoAnswer;
+import com.example.quiz.dto.response.ResponseCheckQuiz;
 import com.example.quiz.dto.response.ResponseMessage;
 import com.example.quiz.dto.response.ResponseQuiz;
 import com.example.quiz.entity.Game;
@@ -21,14 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class GameService {
 
-    private static final Map<Long, Set<Long>> roomQuizMap = new ConcurrentHashMap<>();
+    private static final Map<Long, List<Long>> roomQuizMap = new ConcurrentHashMap<>();
     private final GameRepository gameRepository;
     private final QuizRepository quizRepository;
     private final RoomRepository roomRepository;
@@ -77,7 +76,6 @@ public class GameService {
             return new ResponseMessage(user.getId(), user.getEmail(), user.getRole(), inGameUser.isReadyStatus(), false);
         }
     }
-
     // User 인 사람이 모두 Ready 인지 판단
     private boolean isAllReady(Set<InGameUser> inGameUserSet) {
         for(InGameUser inGameUser : inGameUserSet) {
@@ -97,12 +95,12 @@ public class GameService {
     }
 
     @Transactional
-    public ResponseQuiz sendQuiz(String roomId, RequestUserInfoAnswer userInfoAnswer) {
+    public ResponseQuiz sendQuiz(String roomId) {
         Room room = roomRepository.findById(Long.valueOf(roomId)).orElseThrow(() -> new RuntimeException("Room not found"));
         Quiz quiz = selectRandomQuiz(Long.parseLong(roomId), room.getTopicId());
         int quizCount = decreaseQuizCount(room);
 
-        return new ResponseQuiz(quiz.getProblem(), quiz.getCorrectAnswer(), quiz.getDescription(), quizCount);
+        return new ResponseQuiz(quiz.getProblem(), quizCount);
     }
     // 남은 퀴즈수 1 감소
     private int decreaseQuizCount(Room room) {
@@ -112,8 +110,8 @@ public class GameService {
     }
     // topic Id 맞게 중복되지 않는 Quiz 반환
     public Quiz selectRandomQuiz(Long roomId, Long topicId) {
-        roomQuizMap.putIfAbsent(roomId, new HashSet<>());
-        Set<Long> usedQuizIds = roomQuizMap.get(roomId);
+        roomQuizMap.putIfAbsent(roomId, new ArrayList<>());
+        List<Long> usedQuizIds = roomQuizMap.get(roomId);
 
         List<Quiz> allQuizzes = quizRepository.findAllByTopicId(topicId);
         List<Quiz> availableQuizzes = quizRepository.findAllByTopicId(topicId).stream()
@@ -133,11 +131,31 @@ public class GameService {
         usedQuizIds.add(selectedQuiz.getQuizId());
         return selectedQuiz;
     }
-    // TODO ResponseQuiz 수정
-    public ResponseQuiz checkAnswer(String id, RequestAnswer requestAnswer) {
 
-        Quiz quiz = quizRepository.findById(requestAnswer.quizId()).get();
+    public ResponseCheckQuiz checkAnswer(String id, RequestAnswer requestAnswer) {
+        User user = userRepository.findById(requestAnswer.userId()).orElseThrow(() -> new RuntimeException("User not found"));
+        Room room = roomRepository.findById(Long.valueOf(id)).orElseThrow(() -> new RuntimeException("Room not found"));
+        Long correctQuizId = correctQuizId(roomQuizMap.get(room.getRoomId()));
+        Quiz quiz = quizRepository.findById(correctQuizId).orElseThrow(() -> new RuntimeException("Quiz not found"));
+        boolean isRight = check(requestAnswer.answer(), quiz);
 
-        return new ResponseQuiz("prob", "correctAnswer", "description", 3);
+        // 정답이 맞으면 정답 반환. 오답이면 null 반환.
+        if(isRight) {
+            return new ResponseCheckQuiz(user.getEmail(), true, quiz.getCorrectAnswer(), quiz.getDescription());
+        }
+        else {
+            return new ResponseCheckQuiz(user.getEmail(), false, null, null);
+        }
+    }
+
+    private boolean check(String answer, Quiz quiz) {
+        return quiz.getCorrectAnswer().equals(answer);
+    }
+
+    private Long correctQuizId(List<Long> usedQuizIds) {
+        return usedQuizIds.stream()
+                .skip(usedQuizIds.size() - 1)
+                .findFirst()
+                .orElse(-1L);
     }
 }
