@@ -37,18 +37,4 @@ public class GameController {
 
         messagingTemplate.convertAndSend("/pub/room/"+id, msg);
     }
-  
-    @MessageMapping("/{id}/send")
-    public void sendQuiz(@DestinationVariable String id, RequestUserInfoAnswer userInfoAnswer){
-        ResponseQuiz responseQuiz = gameService.sendQuiz(id,userInfoAnswer);
-
-        messagingTemplate.convertAndSend("/pub/"+id+"/send", responseQuiz);
-    }
-
-    @MessageMapping("/{id}/check")
-    public void checkQuiz(@DestinationVariable String id, RequestAnswer requestAnswer){
-        ResponseQuiz responseQuiz = gameService.checkAnswer(id, requestAnswer);
-
-        messagingTemplate.convertAndSend("/pub/"+id+"/check",responseQuiz);
-    }
 }

@@ -6,4 +6,5 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @EnableMongoRepositories
 public interface GameRepository extends MongoRepository<Game, String> {
+    void removeById(String id);
 }
