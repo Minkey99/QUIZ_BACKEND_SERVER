@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameService {
 
     private static final Map<Long, List<Long>> roomQuizMap = new ConcurrentHashMap<>();
+    private static final Map<Long, Map<Long, Long>> currentInGameScore = new ConcurrentHashMap<>();
     private final GameRepository gameRepository;
     private final QuizRepository quizRepository;
     private final RoomRepository roomRepository;
@@ -100,7 +101,7 @@ public class GameService {
         Quiz quiz = selectRandomQuiz(Long.parseLong(roomId), room.getTopicId());
         int quizCount = decreaseQuizCount(room);
 
-        return new ResponseQuiz(quiz.getProblem(), quizCount);
+        return new ResponseQuiz(quiz.getProblem(), quiz.getCorrectAnswer(), quiz.getDescription(), quizCount);
     }
     // 남은 퀴즈수 1 감소
     private int decreaseQuizCount(Room room) {
@@ -141,10 +142,20 @@ public class GameService {
 
         // 정답이 맞으면 정답 반환. 오답이면 null 반환.
         if(isRight) {
-            return new ResponseCheckQuiz(user.getEmail(), true, quiz.getCorrectAnswer(), quiz.getDescription());
+            increaseScore(user.getId(), room.getRoomId());
+            // final winner 반환
+            List<String> finalWinners = findFinalWinners(room.getRoomId());
+            if(room.getQuizCount() == 0) {
+                // 모든 게임이 끝난 후 점수 삭제
+                currentInGameScore.remove(room.getRoomId());
+                return new ResponseCheckQuiz(user.getEmail(), true, true, finalWinners, quiz.getCorrectAnswer(), quiz.getDescription());
+            }
+            else {
+                return new ResponseCheckQuiz(user.getEmail(), true, false, finalWinners, quiz.getCorrectAnswer(), quiz.getDescription());
+            }
         }
         else {
-            return new ResponseCheckQuiz(user.getEmail(), false, null, null);
+            return new ResponseCheckQuiz(user.getEmail(), false, false,null, null, null);
         }
     }
 
@@ -157,5 +168,35 @@ public class GameService {
                 .skip(usedQuizIds.size() - 1)
                 .findFirst()
                 .orElse(-1L);
+    }
+    // 방이 없으면 추가하고, 점수 카운팅을 한다
+    private void increaseScore(Long userId, Long roomId) {
+        currentInGameScore.putIfAbsent(roomId, new HashMap<>());
+        Map<Long, Long> score = currentInGameScore.get(roomId);
+        score.put(userId, score.getOrDefault(userId, 0L) + 1L);
+    }
+    // 최종 우승자 반환
+    private List<String> findFinalWinners(Long roomId) {
+        Map<Long, Long> score = currentInGameScore.get(roomId);
+        if (score == null || score.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 1) 최대 점수 찾기
+        Long maxScore = score.values().stream()
+                .max(Long::compare)
+                .orElse(Long.MIN_VALUE);
+
+        // 2) 최대 점수를 가진 userId들 필터 & 이메일 변환
+        return score.entrySet().stream()
+                // 최대 점수를 가진 엔트리만 추출
+                .filter(e -> e.getValue().equals(maxScore))
+                // userId 추출
+                .map(Map.Entry::getKey)
+                // userId -> email 변환 (UserRepository 예시)
+                .map(userId -> userRepository.findById(userId)
+                        .map(User::getEmail)
+                        .orElse("unknown@example.com"))  // 존재하지 않는 사용자 처리
+                .toList();
     }
 }
