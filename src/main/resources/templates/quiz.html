@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Quiz In-Game</title>
-</head>
-    <!-- 예: SockJS, stomp.js가 필요하다면 추가 -->
+    <!-- SockJS, stomp.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- quiz.js 연결 (JS 로직) -->
     <script defer src="/script/quiz.js"></script>
-    <!-- quiz.js 등 스크립트 연결 예정 -->
+    <!-- CSS 연결 (예: game.css, quiz.css) -->
     <link rel="stylesheet" href="/css/game.css">
     <link rel="stylesheet" href="/css/quiz.css">
 </head>
@@ -20,8 +20,14 @@
     <div style="float: right; text-align: right;">
         <div style="display: flex; align-items: center; gap: 1rem; justify-content: flex-end;">
             <span style="font-weight: bold;">User Info:</span>
-            <span>UserID: <span th:text="${responseQuiz.userId}"></span></span>
-            <span>Email: <span th:text="${responseQuiz.email}"></span></span>
+            <span>
+                UserID:
+                <span id="userId" th:text="${responseQuiz.userId}"></span>
+            </span>
+            <span>
+                Email:
+                <span id="email" th:text="${responseQuiz.email}"></span>
+            </span>
         </div>
     </div>
 </header>
@@ -31,45 +37,66 @@
 <!-- 게임 상태 영역 -->
 <section>
     <h2>Game Status</h2>
-    <!-- 제한 시간 (기본 30초, JS에서 카운트다운 예정) -->
+
+    <!-- Toast 메시지 표시 영역 -->
     <div id="toast-container" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
+
+    <!-- 제한 시간 (기본 30초) -->
     <p>
         TimeLeft: <span id="timeLeft">30</span> seconds
     </p>
-    <!-- RemainQuiz: responseQuiz.quizCount를 기본값으로 표시 -->
+
+    <!-- RemainQuiz: quizCount 표시 -->
     <p>
         RemainQuiz: <span id="remainQuiz" th:text="${responseQuiz.quizCount}"></span>
-        <!-- Admin만 보이는 CreateQuiz 버튼 -->
-        <button id="createQuizBtn"
-                th:if="${responseQuiz.role() == T(com.example.quiz.enums.Role).ADMIN}">
-            Create Quiz
-        </button>
     </p>
+
+    <!-- Admin만 보이는 CreateQuiz 버튼: RemainQuiz 태그 "밑"에 배치 -->
+    <button id="createQuizBtn"
+            th:if="${responseQuiz.role() == T(com.example.quiz.enums.Role).ADMIN}">
+        Create Quiz
+    </button>
 </section>
+
+<hr> <!-- 구분선 -->
 
 <!-- 문제 영역 -->
 <section>
     <h2>Problem</h2>
-    <!-- 아직 문제를 어떻게 가져오는지 정해지지 않았으므로, JS에서 세팅 -->
+    <!-- JS에서 세팅하는 문제 내용 -->
     <p id="problem">문제 내용이 표시될 영역</p>
+
     <!-- 사용자 정답 입력 폼 -->
     <div>
         <input type="text" id="answerInput" placeholder="Write your answer here" />
         <button id="answerBtn">Submit</button>
     </div>
+
+    <!-- 정답 정보 표시 -->
+    <p id="correctAnswer" style="color: green; font-weight: bold;">
+        정답: <span id="correctAnswerText"></span>
+    </p>
+    <p id="description">
+        설명: <span id="descriptionText"></span>
+    </p>
 </section>
+
+<hr> <!-- 구분선 -->
 
 <!-- 현재 정답자 -->
 <section>
     <h2>Current Winner</h2>
-    <!-- 정답자 표시 -->
-    <p>Winner: <span id="winner">아직 없음</span></p>
+    <p>Winner: <span id="winner">현재 우승자가 표시됩니다.</span></p>
 </section>
+
+<hr> <!-- 구분선 -->
 
 <!-- 최종 우승자 -->
 <section>
     <h2>Final Winner</h2>
-    <p>Final Winner: <span id="finalWinner">???</span></p>
+    <ul id="finalWinnersList" style="display: none;">
+        <!-- JS에서 li 항목 생성 -->
+    </ul>
     <!-- 동점자가 있으면 JS 로직에서 여러 명을 표시하도록 확장 가능 -->
 </section>
 

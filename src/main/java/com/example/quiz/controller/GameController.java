@@ -1,10 +1,8 @@
 package com.example.quiz.controller;
 
-import com.example.quiz.dto.request.RequestAnswer;
+
 import com.example.quiz.dto.request.RequestUserId;
-import com.example.quiz.dto.request.RequestUserInfoAnswer;
 import com.example.quiz.dto.response.ResponseMessage;
-import com.example.quiz.dto.response.ResponseQuiz;
 import com.example.quiz.service.GameService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,26 +27,12 @@ public class GameController {
 
         messagingTemplate.convertAndSend("/pub/room/"+id, responseMessage);
     }
-
+    
     @MessageMapping("/{id}/start")
     public void start(@DestinationVariable String id) {
         Map<String, Object> msg = new HashMap<>();
         msg.put("gameStarted", true);
 
         messagingTemplate.convertAndSend("/pub/room/"+id, msg);
-    }
-  
-    @MessageMapping("/{id}/send")
-    public void sendQuiz(@DestinationVariable String id, RequestUserInfoAnswer userInfoAnswer){
-        ResponseQuiz responseQuiz = gameService.sendQuiz(id,userInfoAnswer);
-
-        messagingTemplate.convertAndSend("/pub/"+id+"/send", responseQuiz);
-    }
-
-    @MessageMapping("/{id}/check")
-    public void checkQuiz(@DestinationVariable String id, RequestAnswer requestAnswer){
-        ResponseQuiz responseQuiz = gameService.checkAnswer(id, requestAnswer);
-
-        messagingTemplate.convertAndSend("/pub/"+id+"/check",responseQuiz);
     }
 }
