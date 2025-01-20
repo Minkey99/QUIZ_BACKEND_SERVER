@@ -86,7 +86,7 @@
 <!-- 현재 정답자 -->
 <section>
     <h2>Current Winner</h2>
-    <p>Winner: <span id="winner">아직 없음</span></p>
+    <p>Winner: <span id="winner">현재 우승자가 표시됩니다.</span></p>
 </section>
 
 <hr> <!-- 구분선 -->
@@ -94,7 +94,9 @@
 <!-- 최종 우승자 -->
 <section>
     <h2>Final Winner</h2>
-    <p>Final Winner: <span id="finalWinner">???</span></p>
+    <ul id="finalWinnersList" style="display: none;">
+        <!-- JS에서 li 항목 생성 -->
+    </ul>
     <!-- 동점자가 있으면 JS 로직에서 여러 명을 표시하도록 확장 가능 -->
 </section>
 

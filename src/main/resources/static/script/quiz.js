@@ -5,6 +5,7 @@ let timeIntervalId = null; // 타이머 ID
 let stompClient;
 let ans;
 let des;
+let curQuiz;
 
 window.onload = function () {
     initPage();
@@ -56,8 +57,11 @@ function connectToQuizUpdates() {
                 updateQuizStatus(quizData);
                 hideAnswerAndDescription();
             }
-            else {
+            else if(!quizData.finalResult){
                 handleWinner(quizData);
+            }
+            else {
+                handleFinalWinners(quizData);
             }
         });
     });
@@ -92,10 +96,11 @@ function checkQuizEvent() {
 function handleWinner(quizData) {
     const winnerSpan = document.getElementById("winner");
 
-    if(!quizData.result) {
+    if(!quizData.currentResult) {
         showToast("틀렸습니다.")
         return;
     }
+
     winnerSpan.textContent = quizData.email;
     // 시간을 0초로 즉시 만듬
     if(timeIntervalId) {
@@ -110,28 +115,71 @@ function handleWinner(quizData) {
     document.getElementById("description").style.display = "block";
     document.getElementById("descriptionText").textContent = quizData.description;
 
-    // CreateQuiz 버튼 다시 활성화 (문제가 남아있다면)
-    if (remainQuizValue > 0) {
-        // Toast로 승리자 알림
-        showToast(`이번 문제의 승리자는 ${quizData.email} 님입니다!`, 3000);
-        const createQuizBtn = document.getElementById("createQuizBtn");
-        if (createQuizBtn) {
-            createQuizBtn.disabled = false;
-        }
+    // Toast로 승리자 알림
+    showToast(`이번 문제의 승리자는 ${quizData.email} 님입니다!`, 3000);
+    const createQuizBtn = document.getElementById("createQuizBtn");
+    if (createQuizBtn) {
+        createQuizBtn.disabled = false;
     }
-    // 마지막 문제였을때
-    else if (remainQuizValue === 0) {
-        // 최종 우승자 표시
-        const finalWinnerElem = document.getElementById("finalWinner");
-        const finalWinner = finalWinnerElem ? finalWinnerElem.textContent : "알 수 없음";
+    // 정답자 최신화
+    curQuiz = quizData;
+}
+// 최종 우승자 표시
+function handleFinalWinners(quizData) {
+    // 타이머 종료
+    if(timeIntervalId) {
+        clearInterval(timeIntervalId);
+    }
+    timeLeft = 0;
+    const timeLeftElem = document.getElementById("timeLeft");
+    if(timeLeftElem) timeLeftElem.textContent = 0;
 
-        // 축하 메시지와 리다이렉트
-        showToast("모든 퀴즈가 끝났습니다! 최종 우승자는"+finalWinner+"입니다! 축하합니다! 5초뒤에 로비로 이동합니다.")
-        const roomId = window.location.pathname.split("/")[2];
+    const finalWinnersList = document.getElementById("finalWinnersList");
+    if (!finalWinnersList) return;
+
+    // 정답 & 설명 표시
+    document.getElementById("correctAnswer").style.display = "block";
+    document.getElementById("correctAnswerText").textContent = ans;
+    document.getElementById("description").style.display = "block";
+    document.getElementById("descriptionText").textContent = des;
+
+    // 기존 리스트 초기화
+    finalWinnersList.innerHTML = "";
+    // 숨겨진 리스트를 표시
+    finalWinnersList.style.display = "block";
+
+    // 우승자가 없거나 배열이 비었을 때 처리
+    if (remainQuizValue === 0) {
+        showToast("전원 탈락! 최종 우승자는 없습니다. 5초 뒤에 로비로 이동합니다.");
         setTimeout(() => {
+            const roomId = window.location.pathname.split("/")[2];
             window.location.href = `/room/${roomId}`;
-        }, 5000); // 5000ms = 5초
+        },5000);
     }
+
+    // 배열에 있는 각 우승자를 <li>로 표시
+    quizData.finalWinners.forEach(winner => {
+        const li = document.createElement("li");
+        li.textContent = winner;
+        finalWinnersList.appendChild(li);
+    });
+
+    // finalWinners가 배열이라 가정
+    const finalWinnersArray = quizData.finalWinners; // ["alice@example.com", "bob@example.com"]
+    let finalWinnersText = "알 수 없음";
+    if (Array.isArray(finalWinnersArray) && finalWinnersArray.length > 0) {
+        // 쉼표로 구분된 문자열로 합치기
+        finalWinnersText = finalWinnersArray.join(", ");
+    }
+
+    // 축하 토스트 메시지와 리다이렉트
+    showToast(`모든 퀴즈가 끝났습니다! 최종 우승자는 ${finalWinnersText} 입니다! 축하합니다! 5초뒤에 로비로 이동합니다.`);
+    const roomId = window.location.pathname.split("/")[2];
+    setTimeout(() => {
+        window.location.href = `/room/${roomId}`;
+    }, 5000);
+
+    // 전원 탈락 최종우승자는 없습니다. 5초뒤에 로비로 이동합니다.
 }
 
 // 타이머 시작 함수
@@ -146,23 +194,26 @@ function startTimer() {
     timeIntervalId = setInterval(() => {
         timeLeft--;
         if (timeLeftElem) timeLeftElem.textContent = timeLeft;
-
+        // Case 1) 아직 남은 퀴즈 있음
         if (timeLeft <= 0) {
             clearInterval(timeIntervalId);
-            if(remainQuizValue !== 0) {
-                showToast("시간 종료");
+            if (remainQuizValue !== 0) {
+                showToast("시간 종료!");
+                // Admin에서 createQuiz 버튼 활성화
+                const createQuizBtn = document.getElementById("createQuizBtn");
+                if (createQuizBtn) {
+                    createQuizBtn.disabled = false;
+                }
+                // 현재 문제 정답 & 설명 표시 (ans, des)
+                document.getElementById("correctAnswer").style.display = "block";
+                document.getElementById("correctAnswerText").textContent = ans;
+                document.getElementById("description").style.display = "block";
+                document.getElementById("descriptionText").textContent = des;
             }
-
-            // Admin에서 createQuiz 버튼 활성화
-            const createQuizBtn = document.getElementById("createQuizBtn");
-            if (createQuizBtn && remainQuizValue !== 0) {
-                createQuizBtn.disabled = false;
+            // Case 2) 남은 퀴즈가 0 => 최종 우승자 처리
+            else {
+                handleFinalWinners(curQuiz)
             }
-
-            document.getElementById("correctAnswer").style.display = "block";
-            document.getElementById("correctAnswerText").textContent = ans;
-            document.getElementById("description").style.display = "block";
-            document.getElementById("descriptionText").textContent = des;
         }
     }, 1000);
 }
@@ -203,10 +254,11 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
-// 정답과 설명을 숨기는 함수
+// 정답과 설명과 현재 우승자를 숨기는 함수
 function hideAnswerAndDescription() {
     const correctAnswerElem = document.getElementById("correctAnswerText");
     const descriptionElem = document.getElementById("descriptionText");
+    const currentWinnerElem = document.getElementById("winner");
 
     if (correctAnswerElem) {
         correctAnswerElem.textContent = ""; // 내용도 초기화
@@ -214,5 +266,9 @@ function hideAnswerAndDescription() {
 
     if (descriptionElem) {
         descriptionElem.textContent = ""; // 내용도 초기화
+    }
+
+    if (currentWinnerElem) {
+        currentWinnerElem.textContent = ""; // 내용도 초기화
     }
 }
