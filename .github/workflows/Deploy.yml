@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build with Gradle
-        run: ./gradlew clean build
+        run: ./gradlew clean bootJar
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
