@@ -37,7 +37,7 @@ jobs:
 
       - name: Copy Jar to EC2
         run: |
-          scp -P 30600 build/libs/*.jar ubuntu@${{ secrets/EC2_PUBLIC_IP }}:~/quiz
+          scp -P 30600 build/libs/*.jar ubuntu@${{ secrets.EC2_PUBLIC_IP }}:~/quiz
 
       - name: Restart server
         run: |
